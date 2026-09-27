@@ -1,57 +1,86 @@
-# To-Do Command Center
+# ✅ To-Do Command Center
 
-A feature-rich command-line To-Do Application built for the **Codveda Technology Python Development Internship — Level 2, Task 1**.
+> **Codveda Technology — Python Development Internship**  
+> **Level 2 · Task 1 — To-Do Application**
 
-## Features
+A feature-rich command-line productivity application built with Python. It goes beyond a basic task list with priorities, categories, search, filtering, statistics, persistent JSON storage, validation, and a comprehensive automated test suite.
 
-- Add **multiple tasks** in one session
-- Assign **priority**: Low, Medium, High
-- Organize tasks by **category**: Personal, College, Work, Other
-- View tasks in a clean table
-- Mark tasks as complete
+## ✨ Why This Project?
+
+Instead of building a one-task-at-a-time demo, the **To-Do Command Center** is designed as a practical mini productivity tool.
+
+~~~text
+                    TO-DO COMMAND CENTER
+                           │
+        ┌──────────────────┼──────────────────┐
+        ▼                  ▼                  ▼
+     Manage             Organize           Analyze
+     Tasks              Tasks              Progress
+        │                  │                  │
+   Add / Edit /       Priority /          Statistics
+   Complete /         Category /           / Search
+   Delete             Filter               / Filter
+~~~
+
+## 🚀 Features
+
+### 📝 Task Management
+- Add multiple tasks
 - Edit existing tasks
+- Mark tasks as complete
 - Delete tasks
+- Automatic task IDs
+
+### 🎨 Organization
+- **Priority:** Low · Medium · High
+- **Category:** Personal · College · Work · Other
 - Search by task title or category
 - Filter by completion status and priority
-- View productivity statistics
-- Clear all completed tasks at once
-- Automatically persist data in JSON
-- Handle invalid IDs, empty titles, invalid priorities/categories, and corrupted JSON safely
 
-## Requirements
+### 📊 Productivity
+- Total task count
+- Completed tasks
+- Pending tasks
+- Pending high-priority tasks
+- Clear completed tasks with confirmation
 
-- Python 3.8+
-- No external packages
+### 💾 Persistence & Reliability
+- Automatic JSON persistence
+- Safe atomic saving
+- Validation of stored task data
+- Corrupted/invalid JSON handling
+- Positive task-ID validation
+- Invalid input handling
+- Friendly error messages
 
-## Project Structure
+### 🧪 Testing
+- Automated tests with unittest
+- Persistence tests
+- Validation tests
+- CRUD tests
+- Search/filter tests
+- Statistics tests
+- CLI behavior tests
 
-```
-codveda-python-level2-todo/
-├── todo_app.py
-├── tests/
-│   └── test_todo_app.py
-├── data/
-│   └── tasks.json
-├── README.md
-└── .gitignore
-```
+## 🎯 Codveda Requirements
 
-## Run
+| Requirement | Implementation |
+|---|---|
+| Add tasks | ✅ Multiple tasks supported |
+| View tasks | ✅ Clean terminal table |
+| Delete tasks | ✅ Task-ID based |
+| Mark complete | ✅ Supported |
+| Persistent storage | ✅ JSON |
+| Basic error handling | ✅ Robust validation and file handling |
 
-```bash
-python3 todo_app.py
-```
+The application also includes additional functionality beyond the minimum requirements.
 
-Tasks are automatically saved to `data/tasks.json`.
+## 🖥️ Menu
 
-## Run Tests
-
-```bash
-python3 -m unittest discover -s tests -v
-```
-
-## Menu
-
+~~~text
+================================================
+              TO-DO COMMAND CENTER
+================================================
 1. Add task
 2. View all tasks
 3. Mark task as complete
@@ -62,14 +91,77 @@ python3 -m unittest discover -s tests -v
 8. Productivity statistics
 9. Clear completed tasks
 10. Exit
+~~~
 
-## Internship
+## 🧰 Tech Stack
 
-**Organization:** Codveda Technology  
-**Domain:** Python Development  
+- 🐍 Python 3
+- 📄 JSON
+- 🧪 unittest
+- 💻 Command-line interface
+- 🌿 Git
+- 🐙 GitHub
+
+No external Python packages are required.
+
+## 🚀 Getting Started
+
+~~~bash
+git clone https://github.com/Bandhan-lab/codveda-python-level2-todo.git
+cd codveda-python-level2-todo
+python3 todo_app.py
+~~~
+
+Tasks are automatically stored in **data/tasks.json**.
+
+## 🧪 Run Tests
+
+~~~bash
+python3 -m unittest discover -s tests -v
+~~~
+
+The suite covers task creation, editing, completion, deletion, persistence, validation, search/filter behavior, statistics, corrupted data, and interactive CLI cases.
+
+## 📁 Project Structure
+
+~~~text
+codveda-python-level2-todo/
+├── todo_app.py
+├── data/
+│   └── tasks.json
+├── README.md
+├── .gitignore
+└── tests/
+    └── test_todo_app.py
+~~~
+
+## 🧠 What This Project Demonstrates
+
+- Python modular programming
+- CRUD operations
+- JSON file persistence
+- Data validation
+- Exception handling
+- Search and filtering
+- State management
+- CLI application design
+- Automated testing
+- Defensive programming
+- Git/GitHub workflow
+
+## 📌 Project Status
+
+**Status:** ✅ Completed  
+**Program:** Codveda Technology — Python Development Internship  
 **Level:** 2 — Intermediate  
-**Task:** Task 1 — To-Do Application
+**Task:** 1 — To-Do Application
 
-## Author
+## 👨‍💻 Author
 
-**Bandhan Kumar Sahoo**
+**Bandhan Kumar Sahoo**  
+B.Tech — CSE (AI & ML)  
+GITA Autonomous College, Bhubaneswar, Odisha, India
+
+Built as part of the Codveda Technology Python Development Internship.
+
+⭐ If you find the project useful, consider giving the repository a star.
