@@ -5,6 +5,9 @@ categories, search, filtering, editing, statistics, and bulk cleanup.
 """
 
 import json
+import os
+import tempfile
+import warnings
 from pathlib import Path
 from typing import Dict, List, Optional
 
@@ -13,22 +16,55 @@ PRIORITIES = ("Low", "Medium", "High")
 CATEGORIES = ("Personal", "College", "Work", "Other")
 
 
+def _is_valid_positive_id(task_id: object) -> bool:
+    """Return True only for positive integer IDs."""
+    return isinstance(task_id, int) and not isinstance(task_id, bool) and task_id > 0
+
+
 def load_tasks(data_file: Path = DEFAULT_DATA_FILE) -> List[Dict]:
     """Load valid tasks from JSON storage."""
     try:
         with data_file.open("r", encoding="utf-8") as file:
             tasks = json.load(file)
-    except (FileNotFoundError, json.JSONDecodeError):
+    except FileNotFoundError:
         return []
+    except (PermissionError, OSError, json.JSONDecodeError) as exc:
+        warnings.warn(f"Unable to read tasks from {data_file}: {exc}")
+        return []
+
     if not isinstance(tasks, list):
+        warnings.warn(f"Tasks data in {data_file} is not a JSON list; ignoring invalid file content.")
         return []
+
     valid_tasks = []
-    for task in tasks:
+    seen_ids = set()
+    for index, task in enumerate(tasks):
         if not isinstance(task, dict):
+            warnings.warn(f"Skipping invalid task at index {index}: entry is not a dictionary.")
             continue
-        if not (isinstance(task.get("id"), int) and isinstance(task.get("title"), str)
-                and isinstance(task.get("completed"), bool)):
+        task_id = task.get("id")
+        if not _is_valid_positive_id(task_id):
+            warnings.warn(f"Skipping invalid task at index {index}: id must be a positive integer.")
             continue
+        if task_id in seen_ids:
+            warnings.warn(f"Skipping duplicate task ID {task_id} at index {index}.")
+            continue
+        title = task.get("title")
+        if not isinstance(title, str):
+            warnings.warn(f"Skipping invalid task at index {index}: title must be a string.")
+            continue
+        cleaned_title = title.strip()
+        if not cleaned_title:
+            warnings.warn(f"Skipping invalid task at index {index}: title cannot be empty.")
+            continue
+        completed = task.get("completed")
+        if not isinstance(completed, bool):
+            warnings.warn(f"Skipping invalid task at index {index}: completed must be a boolean.")
+            continue
+
+        task["id"] = task_id
+        task["title"] = cleaned_title
+        task["completed"] = completed
         task.setdefault("priority", "Medium")
         task.setdefault("category", "Other")
         if task["priority"] not in PRIORITIES:
@@ -36,14 +72,25 @@ def load_tasks(data_file: Path = DEFAULT_DATA_FILE) -> List[Dict]:
         if task["category"] not in CATEGORIES:
             task["category"] = "Other"
         valid_tasks.append(task)
+        seen_ids.add(task_id)
     return valid_tasks
 
 
 def save_tasks(tasks: List[Dict], data_file: Path = DEFAULT_DATA_FILE) -> None:
-    """Save tasks to JSON storage."""
+    """Save tasks to JSON storage using atomic replace."""
     data_file.parent.mkdir(parents=True, exist_ok=True)
-    with data_file.open("w", encoding="utf-8") as file:
-        json.dump(tasks, file, indent=4)
+    temp_path = None
+    try:
+        with tempfile.NamedTemporaryFile("w", encoding="utf-8", dir=str(data_file.parent), delete=False) as file:
+            temp_path = Path(file.name)
+            json.dump(tasks, file, indent=4)
+            file.flush()
+            os.fsync(file.fileno())
+        os.replace(temp_path, data_file)
+    except OSError:
+        if temp_path is not None and temp_path.exists():
+            temp_path.unlink(missing_ok=True)
+        raise
 
 
 def add_task(tasks: List[Dict], title: str, priority: str = "Medium",
@@ -56,7 +103,11 @@ def add_task(tasks: List[Dict], title: str, priority: str = "Medium",
         raise ValueError("Priority must be Low, Medium, or High.")
     if category not in CATEGORIES:
         raise ValueError("Invalid category.")
-    next_id = max((task["id"] for task in tasks), default=0) + 1
+
+    next_id = 1
+    while any(task.get("id") == next_id for task in tasks):
+        next_id += 1
+
     task = {"id": next_id, "title": title, "completed": False,
             "priority": priority, "category": category}
     tasks.append(task)
@@ -65,8 +116,10 @@ def add_task(tasks: List[Dict], title: str, priority: str = "Medium",
 
 def find_task(tasks: List[Dict], task_id: int) -> Dict:
     """Find a task by ID or raise a clear error."""
+    if not _is_valid_positive_id(task_id):
+        raise ValueError("Task ID must be a positive whole number.")
     for task in tasks:
-        if task["id"] == task_id:
+        if task.get("id") == task_id:
             return task
     raise ValueError(f"Task with ID {task_id} not found.")
 
@@ -134,8 +187,19 @@ def filter_tasks(tasks: List[Dict], status: str = "all",
 
 def clear_completed(tasks: List[Dict]) -> int:
     """Remove all completed tasks and return the number removed."""
+    completed_count = sum(1 for task in tasks if task.get("completed") is True)
+    if completed_count == 0:
+        print("No completed tasks to remove.")
+        return 0
+
+    print(f"{completed_count} completed task(s) will be removed. Continue? (y/n): ")
+    confirmation = input().strip().lower()
+    if confirmation not in ("y", "yes"):
+        print("Completed tasks were not removed.")
+        return 0
+
     before = len(tasks)
-    tasks[:] = [task for task in tasks if not task["completed"]]
+    tasks[:] = [task for task in tasks if not task.get("completed")]
     return before - len(tasks)
 
 
@@ -167,20 +231,34 @@ def display_tasks(tasks: List[Dict], heading: str = "Your Tasks") -> None:
 
 def get_task_id(action: str) -> int:
     """Read a task ID safely."""
+    raw_value = input(f"Enter the task ID to {action}: ").strip()
     try:
-        return int(input(f"Enter the task ID to {action}: ").strip())
+        task_id = int(raw_value)
     except ValueError as exc:
         raise ValueError("Task ID must be a whole number.") from exc
+    if task_id <= 0:
+        raise ValueError("Task ID must be a positive whole number.")
+    return task_id
 
 
 def choose_priority() -> str:
     """Read and validate a priority."""
-    return input("Priority (Low/Medium/High) [Medium]: ").strip().title() or "Medium"
+    while True:
+        value = input("Priority (Low/Medium/High) [Medium]: ").strip().title()
+        value = value or "Medium"
+        if value in PRIORITIES:
+            return value
+        print("Invalid priority. Please choose Low, Medium, or High.")
 
 
 def choose_category() -> str:
     """Read and validate a category."""
-    return input("Category (Personal/College/Work/Other) [Other]: ").strip().title() or "Other"
+    while True:
+        value = input("Category (Personal/College/Work/Other) [Other]: ").strip().title()
+        value = value or "Other"
+        if value in CATEGORIES:
+            return value
+        print("Invalid category. Please choose Personal, College, Work, or Other.")
 
 
 def get_menu_choice() -> str:
@@ -233,11 +311,12 @@ def main(data_file: Path = DEFAULT_DATA_FILE) -> None:
             elif choice == "8":
                 stats = get_stats(tasks)
                 print(f'\nTotal: {stats["total"]} | Completed: {stats["completed"]} | '
-                      f'Pending: {stats["pending"]} | High-priority pending: {stats["high_priority"]}')
+                      f'Pending: {stats["pending"]} | Pending high-priority tasks: {stats["high_priority"]}')
             elif choice == "9":
                 removed = clear_completed(tasks)
-                save_tasks(tasks, data_file)
-                print(f"Removed {removed} completed task(s).")
+                if removed:
+                    save_tasks(tasks, data_file)
+                    print(f"Removed {removed} completed task(s).")
             elif choice == "10":
                 print("Goodbye! Keep getting things done.")
                 break
